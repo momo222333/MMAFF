@@ -1,0 +1,52 @@
+work_dir: ./work_dir/ntu60/xview/limb_aff(res, out)&kd_100
+
+# feeder
+feeder: feeders.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: /public/home/zxh_8991/data/NTU60_CV.npz
+  split: train
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: 64
+  normalization: False
+  random_rot: True
+  p_interval: [0.5, 1]
+  stream: limb
+
+test_feeder_args:
+  data_path: /public/home/zxh_8991/data/NTU60_CV.npz
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  debug: False
+  stream: limb
+
+# model
+model: model.ctrgcn.Model
+model_args:
+  num_class: 60
+  num_point: 22
+  num_person: 2
+  center: 21
+  graph: graph.ntu_rgb_d.Graph
+#  head: ['ViT-B/32']
+  graph_args:
+    labeling_mode: 'spatial'
+  in_channels: 12
+  stream: limb
+
+#optim
+weight_decay: 0.0004
+base_lr: 0.1
+lr_decay_rate: 0.1
+step: [35, 55]
+warm_up_epoch: 5
+
+# training
+device: [5]
+batch_size: 128
+test_batch_size: 128
+num_epoch: 100
+nesterov: True

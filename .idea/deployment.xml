@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="zxh_8991@10.130.4.108:22" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
+    <option name="confirmBeforeUploading" value="false" />
+    <serverData>
+      <paths name="mch@10.130.4.102:22 (1)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/mch/Project/CTR-GCN-main" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="zxh_8991@10.130.4.108:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/public/home/zxh_8991/project/CTR-GCN-main" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>
