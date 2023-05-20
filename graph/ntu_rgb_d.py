@@ -28,18 +28,13 @@ limb_neighbor = limb_inward + limb_outward
 
 
 class Graph:
-    def __init__(self, labeling_mode='spatial', center=1, max_hop=1, dilation=1):
+    def __init__(self, labeling_mode='spatial'):
         self.num_node = num_node
         self.self_link = self_link
         self.inward = inward
         self.outward = outward
         self.neighbor = neighbor
-        self.edge = self_link + inward
-        self.max_hop = max_hop
-        self.dilation = dilation
-        self.hop_dis = tools.get_hop_distance(self.num_node, self.edge, max_hop=max_hop)
-        self.center = center - 1
-        self.A_center = self.get_adjacency(labeling_mode)
+
         self.A = self.get_adjacency_matrix(labeling_mode)
         self.limb_A = self.get_limb_adjacency_matrix(labeling_mode)
 
@@ -62,39 +57,3 @@ class Graph:
         return limb_A
 
 
-        # 归一化以及快速图卷积的预处理
-
-    def get_adjacency(self, labeling_mode=None):
-        if labeling_mode is None:
-            return self.A
-        valid_hop = range(0, self.max_hop + 1, self.dilation)  # 合法的距离值：0或1
-        adjacency = np.zeros((self.num_node, self.num_node))
-        for hop in valid_hop:  # hop=0,1
-            adjacency[self.hop_dis == hop] = 1  # 将0|1的位置置1,inf抛弃
-        normalize_adjacency = tools.normalize_digraph(adjacency)  # 图卷积的预处理, 这里的normalize_adjacency已经是归一化之后的A了
-
-        if labeling_mode == 'spatial':
-            A = []
-            for hop in valid_hop:  # hop=0,1
-                a_root = np.zeros((self.num_node, self.num_node))
-                a_close = np.zeros((self.num_node, self.num_node))
-                a_further = np.zeros((self.num_node, self.num_node))
-                for i in range(self.num_node):
-                    for j in range(self.num_node):
-                        if self.hop_dis[j, i] == hop:  # j可以视为根节点的本身（hop=0）或者其邻接节点（hop=1）
-                            if self.hop_dis[j, self.center] == self.hop_dis[i, self.center]:
-                                a_root[j, i] = normalize_adjacency[j, i]
-                            elif self.hop_dis[j, self.center] > self.hop_dis[i, self.center]:
-                                a_close[j, i] = normalize_adjacency[j, i]
-                            else:
-                                a_further[j, i] = normalize_adjacency[j, i]
-                if hop == 0:
-                    A.append(a_root)
-                else:
-                    # A.append(a_root + a_close)
-                    A.append(a_root + a_close)
-                    A.append(a_further)
-            A = np.stack(A)
-            return A
-        else:
-            raise ValueError("Do Not Exist This Strategy")

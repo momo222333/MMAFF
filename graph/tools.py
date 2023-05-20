@@ -73,18 +73,3 @@ def get_multiscale_spatial_graph(num_node, self_link, inward, outward):
     A = np.stack((I, A1, A2, A3, A4))
     return A
 
-# 邻接矩阵的建立
-def get_hop_distance(num_node, edge, max_hop=1):
-    A = np.zeros((num_node, num_node))  # A:18*18,
-    for i, j in edge:  # 构建邻接矩阵, edge: [(0,0),(1,1),(2,2),..., (4,3),...(16,14)]  18+17=35
-        A[j, i] = 1
-        A[i, j] = 1
-
-    # compute hop steps
-    hop_dis = np.zeros((num_node, num_node)) + np.inf  # hop_dis:18*18 由inf填充
-    transfer_mat = [np.linalg.matrix_power(A, d) for d in range(max_hop + 1)]  # 计算矩阵的次方 0:A0,对角矩阵， 1:A1
-    arrive_mat = (np.stack(
-        transfer_mat) > 0)  # transfer_mat是list类型，需要将list堆叠成一个数组才能进行>操作  np.stack对指定axis增加维度  2*18*18
-    for d in range(max_hop, -1, -1):  # range函数的反向输出   1，0
-        hop_dis[arrive_mat[d]] = d  # arrive_mat[1] : 18*18,  arrive_mat[0] : 18*18
-    return hop_dis  # hop_dis()返回的18*18矩阵hop_dis，0代表自环，1代表相连，inf代表不相连

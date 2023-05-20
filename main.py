@@ -27,15 +27,9 @@ from tqdm import tqdm
 
 from torchlight import DictAction
 
-from Text_Prompt import *
-from KLLoss import KLLoss
-
 import resource
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (2048, rlimit[1]))
-
-classes, num_text_aug, text_dict = text_prompt_openai_pasta_pool_4part()
-text_list = text_prompt_openai_random()
 
 scaler = torch.cuda.amp.GradScaler()
 

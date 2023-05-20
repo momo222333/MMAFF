@@ -647,8 +647,7 @@ class Model(nn.Module):
             A = self.graph.limb_A
         elif center == 21:
             A = self.graph.A  # 3,25,25
-        # elif center == 2 or center == 1:
-        #     A = self.graph.A_center
+
 
         self.num_class = num_class
         self.num_point = num_point
