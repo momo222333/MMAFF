@@ -439,12 +439,12 @@ class MultiScale_TemporalConv1(nn.Module):
         # initialize
         self.apply(weights_init)
 
-        # self.aff = AFF(out_channels)
+        self.aff = AFF(out_channels)
 
     def forward(self, x):
         # Input dim: (N,C,T,V)
         res = self.residual(x)
-        # aff = self.aff
+        aff = self.aff
         branch_outs = []
         for tempconv in self.branches:
             out = tempconv(x)
@@ -455,7 +455,7 @@ class MultiScale_TemporalConv1(nn.Module):
 
         out += res
 
-        # out = aff(res, out)
+        out = aff(res, out)
         # out = aff(out, res)
         return out
 
@@ -647,8 +647,8 @@ class Model(nn.Module):
             A = self.graph.limb_A
         elif center == 21:
             A = self.graph.A  # 3,25,25
-        elif center == 2 or center == 1:
-            A = self.graph.A_center
+        # elif center == 2 or center == 1:
+        #     A = self.graph.A_center
 
         self.num_class = num_class
         self.num_point = num_point
@@ -707,105 +707,3 @@ class Model(nn.Module):
 
         return self.fc(x)
 
-class Model1(nn.Module):
-    def __init__(self, num_class=60, num_point=25, num_person=2, graph=None, graph_args=dict(), in_channels=3,
-                 drop_out=0, adaptive=True, head=['ViT-B/32'], center=21, stream="body"):
-        super(Model1, self).__init__()
-
-        if graph is None:
-            raise ValueError()
-        else:
-            Graph = import_class(graph)
-            self.graph = Graph(**graph_args)
-
-        if stream == "limb":
-            A = self.graph.limb_A
-
-        self.num_class = num_class
-        self.num_point = num_point
-        self.data_bn = nn.BatchNorm1d(num_person * in_channels * num_point)
-
-        base_channel = 64
-        layers = []
-
-        l1 = TCN_GCN_unit(in_channels, base_channel, A, residual=False, adaptive=adaptive)
-        l2 = TCN_GCN_unit(base_channel, base_channel, A, adaptive=adaptive)
-        l3 = TCN_GCN_unit(base_channel, base_channel, A, adaptive=adaptive)
-        l4 = TCN_GCN_unit(base_channel, base_channel, A, adaptive=adaptive)
-        l5 = TCN_GCN_unit(base_channel, base_channel * 2, A, stride=2, adaptive=adaptive)
-        l6 = TCN_GCN_unit(base_channel * 2, base_channel * 2, A, adaptive=adaptive)
-        l7 = TCN_GCN_unit(base_channel * 2, base_channel * 2, A, adaptive=adaptive)
-        l8 = TCN_GCN_unit(base_channel * 2, base_channel * 4, A, stride=2, adaptive=adaptive)
-        l9 = TCN_GCN_unit(base_channel * 4, base_channel * 4, A, adaptive=adaptive)
-        l10 = TCN_GCN_unit(base_channel * 4, base_channel * 4, A, adaptive=adaptive)
-
-        if stream == "limb":
-            layers = [l1, l4, l5, l6, l7, l8, l9, l10]
-
-        self.layers = nn.ModuleList(layers)
-
-        self.linear_head = nn.ModuleDict()
-        self.logit_scale = nn.Parameter(torch.ones(1, 5) * np.log(1 / 0.07))
-
-        self.part_list = nn.ModuleList()
-
-        for i in range(1):
-            self.part_list.append(nn.Linear(256,512))
-
-        self.head = head
-        if 'ViT-B/32' in self.head:
-            self.linear_head['ViT-B/32'] = nn.Linear(256, 512)
-            conv_init(self.linear_head['ViT-B/32'])
-
-
-        self.fc = nn.Linear(base_channel*4, num_class)
-        nn.init.normal_(self.fc.weight, 0, math.sqrt(2. / num_class))
-        bn_init(self.data_bn, 1)
-        if drop_out:
-            self.drop_out = nn.Dropout(drop_out)
-        else:
-            self.drop_out = lambda x: x
-
-    def forward(self, x):
-        if len(x.shape) == 3:
-            N, T, VC = x.shape
-            x = x.view(N, T, self.num_point, -1).permute(0, 3, 1, 2).contiguous().unsqueeze(-1)
-        N, C, T, V, M = x.size()
-
-        x = x.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
-        x = self.data_bn(x)
-        x = x.view(N, M, V, C, T).permute(0, 1, 3, 4, 2).contiguous().view(N * M, C, T, V)
-
-        for m in self.layers:
-            x = m(x)
-
-        # N*M,C,T,V
-        c_new = x.size(1)
-        #
-        # feature = x.view(N, M, c_new, T // 4, V)
-        # head_list = torch.Tensor([2, 3, 20]).long()
-        # hand_list = torch.Tensor([4, 5, 6, 7, 8, 9, 10, 11, 20, 21, 22, 23, 24]).long()
-        # foot_list = torch.Tensor([2, 12, 13, 14, 15, 16, 17, 18, 19]).long()
-        # limb_list = torch.Tensor([20, 4, 5, 6, 7, 21, 22, 8, 9, 10, 11, 23, 24,
-        #                           0, 12, 13, 14, 15, 16, 17, 18, 19]).long()
-        # hip_list = torch.Tensor([0, 1, 2, 12, 16]).long()
-        # head_feature = self.part_list[0](feature[:, :, :, :, head_list].mean(4).mean(3).mean(1))
-        # hand_feature = self.part_list[1](feature[:, :, :, :, hand_list].mean(4).mean(3).mean(1))
-        # foot_feature = self.part_list[2](feature[:, :, :, :, foot_list].mean(4).mean(3).mean(1))
-        # limb_feature = self.part_list[0](feature[:, :, :, :, limb_list].mean(4).mean(3).mean(1))
-        # hip_feature = self.part_list[3](feature[:, :, :, :, hip_list].mean(4).mean(3).mean(1))
-
-
-        x = x.view(N, M, c_new, -1)
-        x = x.mean(3).mean(1)
-
-        feature_dict = dict()
-
-        for name in self.head:
-            feature_dict[name] = self.linear_head[name](x)
-
-        x = self.drop_out(x)
-
-        # return self.fc(x), feature_dict, self.logit_scale, [head_feature, hand_feature, hip_feature, foot_feature]
-
-        return self.fc(x), feature_dict, self.logit_scale
