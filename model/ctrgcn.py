@@ -453,7 +453,7 @@ class MultiScale_TemporalConv1(nn.Module):
         # aff(branch_outs[0], 0)
         out = torch.cat(branch_outs, dim=1)
 
-        out += res
+        #out += res
 
         out = aff(res, out)
         # out = aff(out, res)
